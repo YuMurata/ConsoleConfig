@@ -1,6 +1,3 @@
-// ConsoleConfig.cpp : コンソール アプリケーションのエントリ ポイントを定義します。
-//
-
 #include"../include/ConsoleConfig.h"
 
 int main()

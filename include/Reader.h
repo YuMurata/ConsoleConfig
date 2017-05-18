@@ -1,7 +1,6 @@
 #pragma once
 
 #include"Config.h"
-#include<algorithm>
 
 class Reader
 {
@@ -79,7 +78,6 @@ public:
 
 			auto body = [this, &visible](INPUT_RECORD *input_record)
 			{
-				DWORD buff;
 				tstring ret;
 				
 				auto word = input_record->Event.KeyEvent.wVirtualKeyCode;

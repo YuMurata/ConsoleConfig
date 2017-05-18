@@ -2,12 +2,7 @@
 
 #include"Config.h"
 #include"Display.h"
-#include<vector>
-#include<memory>
-#include"../../Ring/Ring/Ring.h"
-#include<string>
-#include<conio.h>
-
+#include"Ring.h"
 #include"Reader.h"
 
 
