@@ -1,17 +1,18 @@
 #pragma once
 
 #include"Config.h"
+#include<Container/Handle.h>
 
 class Reader
 {
 private:
-	HANDLE input;
-	HANDLE output;
+	HandleClass input;
+	HandleClass output;
 
 	void Write(const tstring &str)
 	{
 		DWORD length = lstrlen(str.c_str());
-		WriteConsole(this->output, str.c_str(), length, &length, NULL);
+		WriteConsole(this->output.Get(), str.c_str(), length, &length, NULL);
 	}
 
 	template<typename Pre1,typename Pre2>
@@ -64,7 +65,7 @@ private:
 	}
 
 public:
-	Reader(const HANDLE &input, const HANDLE &output)
+	Reader(const HandleClass &input, const HandleClass &output)
 		:input(input), output(output) {}
 
 	tstring Line(const bool &visible=true)
@@ -86,19 +87,19 @@ public:
 					if (word == VK_BACK)
 					{
 						CONSOLE_SCREEN_BUFFER_INFOEX info{ sizeof(CONSOLE_SCREEN_BUFFER_INFOEX) };
-						GetConsoleScreenBufferInfoEx(this->output, &info);
+						GetConsoleScreenBufferInfoEx(this->output.Get(), &info);
 						
 						DWORD written;
 						info.dwCursorPosition.X -= 1;
 					
 						FillConsoleOutputCharacter(
-							this->output,
+							this->output.Get(),
 							' ',
 							1,
 							info.dwCursorPosition,
 							&written
 						);
-						SetConsoleCursorPosition(this->output, info.dwCursorPosition);
+						SetConsoleCursorPosition(this->output.Get(), info.dwCursorPosition);
 						ret = word;
 					}
 					if(0x30<=word&&word<=0x5a)
@@ -144,7 +145,7 @@ public:
 
 	void SetCursorPos(const COORD &coord)
 	{
-		SetConsoleCursorPosition(this->output, coord);
+		SetConsoleCursorPosition(this->output.Get(), coord);
 	}
 
 	tstring PosLine(const COORD &coord)

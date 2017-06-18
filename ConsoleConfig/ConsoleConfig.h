@@ -2,27 +2,23 @@
 
 #include"Config.h"
 #include"Display.h"
-#include"Ring.h"
 #include"Reader.h"
-
+#include<Container/Ring.h>
+#include<Container/Handle.h>
 
 
 class ConsoleConfig
 {
 private:
-	static void InputDeleter(HANDLE handle)
-	{
-		if (handle != INVALID_HANDLE_VALUE) {
-			CloseHandle(handle);
-		}
-	}
-
-
-	pRing<HANDLE> output_handle;
-	std::unique_ptr<HANDLE,decltype(&InputDeleter)> input_handle;
+	pRing<HandleClass> output_handle;
+	HandleClass input_handle;
 
 	ConsoleConfig()
-		:input_handle(nullptr,InputDeleter)
+		:input_handle
+		(
+			TEXT("CONIN$"), GENERIC_READ | GENERIC_WRITE,
+			FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, 0
+		)
 	{
 		using namespace std;
 
@@ -30,48 +26,28 @@ private:
 		info.dwSize = 1;
 		info.bVisible = FALSE;
 
-
-		vector<pRing<HANDLE>> buff;
-		auto deleater = [](Ring<HANDLE> *obj)
-		{
-			CloseHandle(obj->content);
-		};
+		vector<pRing<HandleClass>> buff;
 
 		for (int i = 0; i < 2; ++i)
 		{
-			HANDLE content;
+			HandleClass content
+			(
+				TEXT("CONOUT$"), GENERIC_READ | GENERIC_WRITE,
+				FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, 
+				CONSOLE_TEXTMODE_BUFFER, NULL,NULL
+			);
 
-			content =
-				CreateConsoleScreenBuffer
-				(
-					GENERIC_READ | GENERIC_WRITE,
-					FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, CONSOLE_TEXTMODE_BUFFER, NULL
-				);
-			SetConsoleCursorInfo(content, &info);
+			SetConsoleCursorInfo(content.Get(), &info);
 
-			pRing<HANDLE> ptr(new Ring<HANDLE>, deleater);
+			pRing<HandleClass> ptr=make_shared<Ring<HandleClass>>();
 			ptr->content = content;
 
 			buff.push_back(ptr);
 		}
 
 		this->output_handle = MakeRing(buff);
-
-		auto input_deleter = [](HANDLE *obj)
-		{
-			CloseHandle(*obj);
-		};
-
-		auto handle=  CreateFile
-		(
-			TEXT("CONIN$"), GENERIC_READ | GENERIC_WRITE,
-			FILE_SHARE_READ| FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, 0
-		);
-
-		unique_ptr<HANDLE,decltype(&InputDeleter)> temp_ptr(new HANDLE(handle), InputDeleter);
-		this->input_handle = move(temp_ptr);
 		
-		SetConsoleActiveScreenBuffer(this->output_handle->content);
+		SetConsoleActiveScreenBuffer(this->output_handle->content.Get());
 	}
 
 	void ErrorDisp()
@@ -110,7 +86,7 @@ public:
 
 	void SetCursorPos(const COORD &coord)
 	{
-		SetConsoleCursorPosition(this->output_handle->Next()->content, coord);
+		SetConsoleCursorPosition(this->output_handle->Next()->content.Get(), coord);
 	}
 
 	void SetCursorPos(const short &x, const short &y)
@@ -125,22 +101,22 @@ public:
 	}
 	void Write(const tstring &str)
 	{
-		this->Write(str, this->output_handle->Next()->content);
+		this->Write(str, this->output_handle->Next()->content.Get());
 	}
 
 	tstring LineRead(const bool &visible = true)
 	{
-		return Reader(*this->input_handle, this->output_handle->content).Line(visible);
+		return Reader(this->input_handle, this->output_handle->content).Line(visible);
 	}
 
 	tstring WordRead(const bool &visible=false)
 	{
-		return Reader(*this->input_handle, this->output_handle->content).Word(visible);
+		return Reader(this->input_handle, this->output_handle->content).Word(visible);
 	}
 
 	tstring PosRead(const COORD &coord)
 	{
-		return Reader(*this->input_handle, this->output_handle->content).PosLine(coord);
+		return Reader(this->input_handle, this->output_handle->content).PosLine(coord);
 	}
 
 	void PosWrite(const Display &disp)
@@ -152,13 +128,13 @@ public:
 	void Swap()
 	{
 		this->output_handle = this->output_handle->Next();
-		SetConsoleActiveScreenBuffer(this->output_handle->content);
+		SetConsoleActiveScreenBuffer(this->output_handle->content.Get());
 	}
 
 	void Clear()
 	{
 		CONSOLE_SCREEN_BUFFER_INFOEX info{sizeof(CONSOLE_SCREEN_BUFFER_INFOEX)};
-		if (!GetConsoleScreenBufferInfoEx(this->output_handle->Next()->content, &info))
+		if (!GetConsoleScreenBufferInfoEx(this->output_handle->Next()->content.Get(), &info))
 		{
 			this->ErrorDisp();
 		}
@@ -166,7 +142,7 @@ public:
 		DWORD written;
 
 		FillConsoleOutputCharacter(
-			this->output_handle->Next()->content,
+			this->output_handle->Next()->content.Get(),
 			' ',
 			info.dwSize.X * info.dwSize.Y,
 			COORD{ 0,0 },
@@ -215,7 +191,7 @@ public:
 			attr |= FOREGROUND_GREEN;
 		if (static_cast<int>(col) & static_cast<int>(Color::BLUE_MASK))
 			attr |= FOREGROUND_BLUE;
-		SetConsoleTextAttribute(this->output_handle->Next()->content, attr);
+		SetConsoleTextAttribute(this->output_handle->Next()->content.Get(), attr);
 	}
 
 	void SetColor(const Color &fg, const Color &bg)
@@ -239,6 +215,6 @@ public:
 			attr |= BACKGROUND_GREEN;
 		if (static_cast<int>(bg) & static_cast<int>(Color::BLUE_MASK))
 			attr |= BACKGROUND_BLUE;
-		SetConsoleTextAttribute(this->output_handle->Next()->content, attr);
+		SetConsoleTextAttribute(this->output_handle->Next()->content.Get(), attr);
 	}
 };
